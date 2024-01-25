@@ -305,7 +305,7 @@ final private class PushApi(
       Data(
         title = streamerName,
         body = streamerName + " started streaming",
-        stacking = Stacking.StreamStart,
+        stacking = Stacking.Generic,
         urgency = Urgency.Low,
         payload = payload(
           "type"       -> "streamStart",
