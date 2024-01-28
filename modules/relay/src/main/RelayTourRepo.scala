@@ -18,7 +18,7 @@ final private class RelayTourRepo(val coll: Coll)(using Executor):
   def subscribers(tid: RelayTour.Id): Fu[Set[UserId]] =
     coll.distinctEasy[UserId, Set]("subscribers", $id(tid))
 
-  def subscribe(tid: RelayTour.Id, uid: UserId, isSubscribed: Boolean): Funit =
+  def setSubscribed(tid: RelayTour.Id, uid: UserId, isSubscribed: Boolean): Funit =
     coll.update
       .one($id(tid), if isSubscribed then $addToSet("subscribers" -> uid) else $pull("subscribers" -> uid))
       .void

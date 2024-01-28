@@ -1,24 +1,19 @@
 package lila.relay
 
-import lila.notify.BroadcastRound
-
-final private class RelayNotifier(
-    notifyApi: lila.notify.NotifyApi,
-    tourRepo: RelayTourRepo
-)(using Executor):
+final private class RelayNotifier(notifyApi: lila.notify.NotifyApi, tourRepo: RelayTourRepo)(using Executor):
 
   def roundBegin(rt: RelayRound.WithTour): Funit =
-    tourRepo.hasNotified(rt) collect { case false =>
+    !tourRepo.hasNotified(rt) flatMapz:
       tourRepo.setNotified(rt) >>
         tourRepo
           .subscribers(rt.tour.id)
           .flatMap: subscribers =>
-            notifyApi.notifyMany(
-              subscribers,
-              BroadcastRound(
-                s"/broadcast/${rt.tour.slug}/${rt.round.slug}/${rt.round.id}",
-                s"${rt.tour.name} round ${rt.round.name} has begun",
-                none
+            subscribers.nonEmpty.so:
+              notifyApi.notifyMany(
+                subscribers,
+                lila.notify.BroadcastRound(
+                  rt.path,
+                  rt.tour.name,
+                  s"${rt.round.name} has begun"
+                )
               )
-            )
-    }
