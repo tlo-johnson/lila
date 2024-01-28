@@ -5,11 +5,11 @@ import lila.study.{ Chapter, MultiPgn, Node, PgnImport }
 import lila.tree.Root
 
 case class RelayGame(
-    index: Int,
     tags: Tags,
     variant: chess.variant.Variant,
     root: Root,
-    ending: Option[PgnImport.End]
+    ending: Option[PgnImport.End],
+    index: Option[Int] = none[Int]
 ):
 
   def staticTagsMatch(chapterTags: Tags): Boolean =

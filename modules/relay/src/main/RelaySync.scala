@@ -64,9 +64,8 @@ final private class RelaySync(
       chapters: List[Chapter],
       nbGames: Int
   ): Option[Chapter] =
-    if nbGames == 1 || chapters.sizeIs > nbGames || game.looksLikeLichess
-    then chapters.find(c => game.staticTagsMatch(c.tags))
-    else chapters.find(_.relay.exists(_.index == game.index))
+    game.index.fold(chapters.find(c => game.staticTagsMatch(c.tags))): index =>
+      chapters.find(_.relay.exists(_.index.contains(index)))
 
   private def updateChapter(
       tour: RelayTour,
