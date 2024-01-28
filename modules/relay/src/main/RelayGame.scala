@@ -24,6 +24,7 @@ case class RelayGame(
     chapterTags(tag) == tags(tag)
 
   def isEmpty = tags.value.isEmpty && root.children.nodes.isEmpty
+  def isPush  = index.isEmpty
 
   def resetToSetup = copy(
     root = root.withoutChildren,

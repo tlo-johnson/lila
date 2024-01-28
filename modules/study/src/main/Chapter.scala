@@ -121,6 +121,7 @@ object Chapter:
       index: Option[Int] // game index in the source URL, none to always match tags
   ):
     def secondsSinceLastMove: Int = (nowSeconds - lastMoveAt.toSeconds).toInt
+    def isPush                    = index.isEmpty
 
   case class ServerEval(path: UciPath, done: Boolean)
 

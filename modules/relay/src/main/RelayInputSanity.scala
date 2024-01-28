@@ -46,7 +46,7 @@ private object RelayInputSanity:
 
   private def isValidPartial(chapters: List[Chapter], games: RelayGames) =
     games.forall: game =>
-      game.index.isEmpty && chapters.exists(c => game.staticTagsMatch(c.tags))
+      game.isPush && chapters.exists(c => game.staticTagsMatch(c.tags))
 
   // DGT puts the kings in the center on game end
   // and sends it as actual moves if the kings were close to the center
