@@ -139,7 +139,7 @@ const header = (relay: RelayCtrl, ctrl: AnalyseCtrl) => {
 <p>Subscribe to be notified when each round starts.</p>
 <p>Ensure that you have either bell or push notifications enabled for broadcasts in your <a href="/account/preferences/notification">notification settings</a>.</p>
           `,
-            show: true,
+            show: 'modal',
           });
         });
       }),
