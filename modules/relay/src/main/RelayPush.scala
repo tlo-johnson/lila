@@ -31,49 +31,39 @@ final class RelayPush(sync: RelaySync, api: RelayApi, irc: lila.irc.IrcApi)(usin
     if rt.round.sync.hasUpstream
     then fuccess(List(Left(Failure(Tags.empty, "The relay has an upstream URL, and cannot be pushed to."))))
     else
-      val parsed = pgnToGames(rt, pgn)
-      rt.round.sync.nonEmptyDelay.fold(push(rt, parsed)): delay =>
-        after(delay.value.seconds)(push(rt, parsed))
-        fuccess(parsed.map(_.map(g => Success(g.tags, g.root.mainline.size))))
+      val parsed   = pgnToGames(rt, pgn)
+      val games    = parsed.collect { case Right(g) => g }.toVector
+      val response = parsed.map(_.map(g => Success(g.tags, g.root.mainline.size)))
 
-  private def push(rt: RelayRound.WithTour, parsed: List[Either[Failure, RelayGame]]) =
+      rt.round.sync.nonEmptyDelay.fold(push(rt, games).inject(response)): delay =>
+        after(delay.value.seconds)(push(rt, games))
+        fuccess(response)
+
+  private def push(rt: RelayRound.WithTour, games: Vector[RelayGame]) =
     workQueue(rt.round.id):
-      parsed
-        .map:
-          case Left(err) => fuccess(Left(err))
-          case Right(game) =>
-            sync
-              .updateStudyChapters(rt, Vector(game))
-              .map: result =>
-                if !rt.round.hasStarted && !rt.tour.official && result.nbMoves > 0 then
-                  irc.broadcastStart(rt.round.id, rt.fullName)
-                Right(Success(game.tags, game.root.mainline.size))
-              .recover:
-                case ex: Exception =>
-                  Left(Failure(game.tags, ex.getMessage))
-        .sequence
-        .flatMap: results =>
-          val events = results.map: e =>
-            e match
-              case Left(err) => SyncLog.event(0, Exception(err.error).some)
-              case Right(s)  => SyncLog.event(s.moves, none)
+      sync
+        .updateStudyChapters(rt, games)
+        .map: res =>
+          SyncLog.event(res.nbMoves, none)
+        .recover:
+          case e: Exception => SyncLog.event(0, e.some)
+        .flatMap: event =>
+          if !rt.round.hasStarted && !rt.tour.official && event.hasMoves then
+            irc.broadcastStart(rt.round.id, rt.fullName)
           api
             .update(rt.round): r1 =>
-              val r2 = events.foldLeft(r1)((r, e) => r.withSync(_ addLog e))
-              val r3 = if events.exists(_.moves > 0) then r2.ensureStarted.resume else r2
-              val finished =
-                parsed.forall(_.isRight) && parsed.forall(_.right.exists(_.ending.isDefined))
-              r3.copy(finished = finished)
-            .inject(results)
+              val r2 = r1.withSync(_ addLog event)
+              val r3 = if event.hasMoves then r2.ensureStarted.resume else r2
+              r3.copy(finished = games.nonEmpty && games.forall(_.ending.isDefined))
 
   private def pgnToGames(rt: RelayRound.WithTour, pgnBody: PgnStr): List[Either[Failure, RelayGame]] =
     MultiPgn
       .split(pgnBody, Max(lila.study.Study.maxChapters * (if rt.tour.official then 2 else 1)))
       .value
       .map: pgn =>
-        validate(pgn).flatMap: valid =>
+        validate(pgn).flatMap: tags =>
           lila.study.PgnImport(pgn, Nil) match
-            case Left(errStr) => Left(Failure(valid.tags, oneline(errStr)))
+            case Left(errStr) => Left(Failure(tags, oneline(errStr)))
             case Right(game) =>
               Right:
                 RelayGame(
@@ -88,7 +78,7 @@ final class RelayPush(sync: RelaySync, api: RelayApi, irc: lila.irc.IrcApi)(usin
                 )
 
   // silently consume DGT board king-check move to center at game end
-  private def validate(pgnBody: PgnStr): Either[Failure, Success] =
+  private def validate(pgnBody: PgnStr): Either[Failure, Tags] =
     Parser
       .full(pgnBody)
       .fold(
@@ -100,11 +90,11 @@ final class RelayPush(sync: RelaySync, api: RelayApi, irc: lila.irc.IrcApi)(usin
             case ((none, r), san) =>
               san(r.state.situation).fold(err => (err.some, r), mv => (none, r.addMove(mv)))
 
-          maybeErr.fold(Right(Success(parsed.tags, parsed.mainline.size))): err =>
+          maybeErr.fold(Right(parsed.tags)): err =>
             parsed.mainline.lastOption match
               case Some(mv: Std) if isFatal(mv, replay, parsed.mainline) =>
                 Left(Failure(parsed.tags, oneline(err)))
-              case _ => Right(Success(parsed.tags, parsed.mainline.size - 1).pp)
+              case _ => Right(parsed.tags)
       )
 
   private def isFatal(mv: Std, replay: Replay, parsed: List[San]) =
