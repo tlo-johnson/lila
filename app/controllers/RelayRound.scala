@@ -148,6 +148,7 @@ final class RelayRound(
             .map: results =>
               JsonOk:
                 Json.obj(
+                  "delay" -> rt.relay.sync.nonEmptyDelay.map(_.value),
                   "games" -> results.map:
                     case Left(fail)  => Json.obj("tags" -> jsonTags(fail.tags), "error" -> fail.error)
                     case Right(pass) => Json.obj("tags" -> jsonTags(pass.tags), "moves" -> pass.moves)
