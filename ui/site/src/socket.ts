@@ -70,7 +70,9 @@ export default class StrongSocket {
   );
   private _sign?: string;
   private resendWhenOpen: [string, any, any][] = [];
-  private baseUrls = (document.body.dataset.socketAlts || document.body.dataset.socketDomains!).split(',');
+  private baseUrls = document.body.dataset.socketAlts
+    ? ['cf-socket.lichess.org']
+    : document.body.dataset.socketDomains!.split(',');
   static defaultOptions: Options = {
     idle: false,
     pingMaxLag: 9000, // time to wait for pong before resetting the connection
@@ -102,7 +104,6 @@ export default class StrongSocket {
       },
     };
     const customPingDelay = storedIntProp('socket.ping.interval', 2500)();
-
     this.options = {
       ...StrongSocket.defaultOptions,
       ...(settings.options || {}),
@@ -346,7 +347,7 @@ export default class StrongSocket {
 
   baseUrl = () => {
     let url = this.storage.get();
-    if (!url) {
+    if (!url || !this.baseUrls.includes(url)) {
       url = this.baseUrls[Math.floor(Math.random() * this.baseUrls.length)];
       this.storage.set(url);
     } else if (this.tryOtherUrl) {
