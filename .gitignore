@@ -4,7 +4,13 @@
 .bloop/
 .metals/
 .pnpm-store/
-project/.bloop/
+
+# git lfs installed hooks
+bin/git-hooks/post-checkout
+bin/git-hooks/post-commit
+bin/git-hooks/post-merge
+bin/git-hooks/pre-push
+
 conf/application.conf
 conf/version.conf
 conf/manifest.*
@@ -16,7 +22,6 @@ project/target
 public/compiled
 public/hashed
 public/npm
-public/lifat
 public/css/
 public/json
 target
