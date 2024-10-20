@@ -1,3 +1,4 @@
+import './i18nHotfix';
 import { boot } from './boot';
 import Mousetrap from './mousetrap';
 import { randomToken } from 'common/algo';
